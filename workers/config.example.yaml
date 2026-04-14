@@ -1,0 +1,35 @@
+# ─── NSG Swarm Workers Configuration ────────────────────────────────
+# Copy to config.yaml and fill in your values.
+
+paperclip:
+  url: http://localhost:3100
+  companySlug: NSG
+
+polling:
+  intervalMs: 30000
+  maxConcurrent: 3
+
+agents:
+  - name: Scout
+    runtime: openclaw
+    mode: telegram
+    botToken: ${SCOUT_BOT_TOKEN}
+    chatId: ${SCOUT_CHAT_ID}
+    timeoutMs: 300000
+
+  - name: Quill
+    runtime: hermes
+    mode: api
+    endpoint: http://localhost:8642
+    timeoutMs: 300000
+
+  - name: Compass
+    runtime: openclaw
+    mode: gateway
+    endpoint: ws://199.7.163.25:18798
+    timeoutMs: 600000
+
+defaults:
+  runtime: openclaw
+  mode: telegram
+  timeoutMs: 300000

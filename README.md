@@ -1,3 +1,80 @@
+# NSG AI Swarm
+
+**12 autonomous AI agents running vision care marketing for 1,000+ practices.**
+
+This is the NSG (New Standard Group) fork of [Paperclip](https://github.com/paperclipai/paperclip). It uses Paperclip as the control plane — org charts, task tracking, budgets, governance — and connects it to real AI runtimes (OpenClaw and Hermes) that do the actual work.
+
+The swarm has 3 departments, 12 agents, and handles everything from scraping practice websites to generating quarterly campaign plans to monitoring SEO rankings.
+
+## Architecture
+
+```
+┌─────────────────────┐     ┌──────────────────┐     ┌────────────────────┐
+│   Paperclip          │     │   Workers          │     │   AI Runtimes      │
+│   (Control Plane)    │     │   (Orchestrator)   │     │                    │
+│                      │     │                    │     │  OpenClaw           │
+│  Dashboard           │◄───►│  Poller            │     │   - Gateway API    │
+│  Agent Management    │REST │  Dispatcher        │────►│   - Telegram Bot   │
+│  Task Tracking       │API  │  Result Reporter   │     │                    │
+│  Goals & Budgets     │     │                    │     │  Hermes             │
+│  Org Chart           │     └──────────────────┘     │   - REST API       │
+│  Audit Log           │                               │   - CLI            │
+└─────────────────────┘                               └────────────────────┘
+```
+
+**Paperclip** manages the company: who the agents are, what they're working on, how much they can spend.
+**Workers** poll Paperclip for assigned tasks and dispatch them to the right AI runtime.
+**AI Runtimes** (OpenClaw/Hermes) execute the tasks — they have the LLM access, tools, and Telegram bots.
+
+## Quick Start
+
+```bash
+# 1. Clone
+git clone https://github.com/abhione/nsg-ai-swarm.git
+cd nsg-ai-swarm
+
+# 2. Install
+pnpm install
+
+# 3. Start Paperclip
+cp .env.example .env
+pnpm dev
+# Open http://localhost:3100 and complete the onboarding wizard
+
+# 4. Seed the 12-agent swarm
+bash setup-nsg.sh
+
+# 5. Connect workers to AI runtimes
+cd workers
+npm install
+cp config.example.yaml config.yaml
+# Edit config.yaml to map agents to your runtime endpoints
+npm run dev
+```
+
+For the full setup guide, runtime configuration, and deployment instructions, see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
+
+For the technical architecture deep-dive, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+## The 12 Agents
+
+| Agent | Title | Department | What They Do |
+|-------|-------|------------|--------------|
+| **Atlas** | Chief AI Officer | Executive | Breaks company goals into department objectives. Reviews cross-department work. |
+| **Athena** | VP Client Intelligence | Client Intelligence | Owns the client profile platform for all 1,000+ practices. |
+| **Scout** | Client Profiler | Client Intelligence | Scrapes practice websites and public data to build structured profiles. |
+| **Echo** | Transcript Analyst | Client Intelligence | Processes call transcripts, extracts pain points and action items. |
+| **Apollo** | VP Campaign Operations | Campaigns | Owns the full campaign pipeline from strategy to deployment. |
+| **Muse** | Campaign Strategist | Campaigns | Generates quarterly campaign plans from client intelligence data. |
+| **Quill** | Content Generator | Campaigns | Creates emails, social posts, GBP posts, SMS, landing page copy. |
+| **Oracle** | VP Analytics & Reporting | Analytics | Owns reporting, data aggregation, and performance monitoring. |
+| **Flux** | Data Aggregator | Analytics | Pulls and normalizes data from 10-15 marketing platforms. |
+| **Sentinel** | Alert Monitor | Analytics | Detects anomalies in rankings, traffic, conversions. Fires alerts. |
+| **Compass** | SEO Auditor | Analytics | Runs 15-point SEO audits across all practices. |
+| **Relay** | Meeting Assistant | Cross-Functional | Generates pre-call briefs, processes transcripts, drafts follow-ups. |
+
+---
+
 <p align="center">
   <img src="doc/assets/header.png" alt="Paperclip — runs your business" width="720" />
 </p>
