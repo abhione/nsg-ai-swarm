@@ -1,0 +1,49 @@
+# ── NSG AI Swarm Worker Configuration ──
+# Copy to config.yaml and fill in your values.
+# Environment variables can be interpolated: ${VAR_NAME} or ${VAR_NAME:-default}
+
+# Paperclip control plane connection
+paperclip:
+  baseUrl: ${PAPERCLIP_URL:-http://localhost:3100}
+  apiKey: ${PAPERCLIP_API_KEY}
+  companyId: ${PAPERCLIP_COMPANY_ID}
+
+# How often to poll for new tasks (milliseconds)
+pollIntervalMs: 5000
+
+# Retry config
+maxRetries: 3
+retryBaseDelayMs: 1000
+
+# Logging: debug, info, warn, error
+logLevel: ${LOG_LEVEL:-info}
+
+# Agent-to-runtime mappings
+# Each Paperclip agent maps to exactly one runtime endpoint
+agents:
+  # Atlas — OpenClaw via Telegram Bot API
+  # The orchestrator sends tasks as Telegram messages and polls for responses
+  - agent: atlas
+    runtime: openclaw-telegram
+    endpoint:
+      botToken: ${ATLAS_BOT_TOKEN}
+      chatId: ${ATLAS_CHAT_ID}
+      timeoutMs: 120000
+
+  # Scout — OpenClaw via WebSocket Gateway
+  # Direct WebSocket connection for low-latency streaming
+  - agent: scout
+    runtime: openclaw-gateway
+    endpoint:
+      wsUrl: ${SCOUT_WS_URL:-ws://localhost:18795}
+      timeoutMs: 120000
+
+  # Quill — Hermes API server
+  # HTTP POST with SSE streaming response
+  - agent: quill
+    runtime: hermes-api
+    endpoint:
+      baseUrl: ${QUILL_HERMES_URL:-http://localhost:8080}
+      model: ${QUILL_HERMES_MODEL:-default}
+      apiKey: ${QUILL_HERMES_API_KEY}
+      timeoutMs: 180000

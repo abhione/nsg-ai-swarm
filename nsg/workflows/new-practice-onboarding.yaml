@@ -1,0 +1,227 @@
+# NSG AI Swarm Workflow: New Practice Onboarding
+# Trigger: New practice signs contract with NSG
+# Duration: 3 business days
+# Outcome: Practice fully profiled, first campaigns designed, data pipelines connected
+
+name: new-practice-onboarding
+description: End-to-end onboarding for a new vision care practice joining NSG
+trigger:
+  event: practice.contract_signed
+  required_data:
+    - practice_name
+    - practice_address
+    - primary_doctor_name
+    - primary_doctor_npi
+    - contact_email
+    - contact_phone
+    - services_offered        # e.g., ["cataract", "lasik", "comprehensive_exam", "glaucoma"]
+    - practice_tier            # platinum | gold | silver
+
+stages:
+  # ── Stage 1: Discovery & Profiling (Hours 0-8) ──────────────────
+  - name: discovery
+    description: Build complete practice profile from public and provided data
+    duration: 8_hours
+    agents:
+      - agent: scout
+        task: build_initial_profile
+        description: |
+          Research and build a complete practice profile:
+          - Doctor bios, credentials, fellowship training, publications
+          - Practice website audit (pages, content, technology mentioned)
+          - Google Business Profile snapshot (reviews, rating, photos, completeness)
+          - Social media presence (Facebook, Instagram, YouTube — follower counts, activity)
+          - Review landscape (Google, Yelp, Healthgrades, Vitals, Zocdoc — counts and ratings)
+          - Competitor analysis (top 5 practices within 10-mile radius)
+          - Demographics (population 40+, 65+, median income, insurance mix in 10-mile radius)
+          - Technology inventory (from website: OCT, femto laser, diagnostic equipment)
+          - Procedure volume estimates based on practice size and payer mix
+        outputs:
+          - practice_profile_v1
+          - competitor_landscape
+          - demographic_summary
+        kpis:
+          profile_completeness: ">= 90%"
+          time_to_complete: "<= 8 hours"
+
+      - agent: flux
+        task: setup_data_pipelines
+        description: |
+          Connect automated data collection for the new practice:
+          - Google Analytics 4 (request access or tracking code install)
+          - Google Business Profile API connection
+          - Facebook/Instagram page connection
+          - Review monitoring setup (Google, Yelp, Healthgrades)
+          - Email platform connection (Mailchimp or Klaviyo)
+          - Call tracking setup (if applicable)
+          Verify first successful data pull from each source.
+        outputs:
+          - pipeline_status_report
+          - data_source_credentials_stored
+        kpis:
+          sources_connected: ">= 4 of 6"
+          first_pull_success: "true"
+
+  # ── Stage 2: Intelligence Synthesis (Hours 8-16) ──────────────────
+  - name: intelligence_synthesis
+    description: Analyze profile data and build strategic brief
+    duration: 8_hours
+    depends_on: [discovery]
+    agents:
+      - agent: athena
+        task: synthesize_practice_intelligence
+        description: |
+          Review Scout's profile and create the Practice Intelligence Brief:
+          - Practice strengths and differentiators
+          - Key weaknesses and vulnerabilities
+          - Competitive positioning (where they win, where they lose)
+          - Top 3 immediate marketing opportunities
+          - Risk factors (e.g., low review count, weak website, strong competitor)
+          - Recommended practice tier confirmation or adjustment
+          - Client communication preferences and personality notes
+        inputs:
+          - practice_profile_v1
+          - competitor_landscape
+          - demographic_summary
+        outputs:
+          - practice_intelligence_brief
+          - marketing_opportunity_list
+          - tier_recommendation
+
+      - agent: compass
+        task: initial_seo_audit
+        description: |
+          Run baseline SEO and AI readiness audit:
+          - Technical SEO score (Core Web Vitals, mobile-friendly, HTTPS, sitemap)
+          - Google Business Profile optimization score
+          - Schema markup check (LocalBusiness, Physician, MedicalOrganization)
+          - AI answer engine baseline (test 10 queries in practice's market)
+          - Content gap analysis vs. top 3 competitors
+          - Keyword ranking baseline for target terms
+        inputs:
+          - practice_profile_v1
+        outputs:
+          - seo_baseline_report
+          - ai_readiness_score
+          - priority_seo_fixes
+        kpis:
+          audit_completeness: "100%"
+
+  # ── Stage 3: Campaign Design (Hours 16-36) ──────────────────
+  - name: campaign_design
+    description: Design first 90 days of campaigns
+    duration: 20_hours
+    depends_on: [intelligence_synthesis]
+    agents:
+      - agent: muse
+        task: design_onboarding_campaigns
+        description: |
+          Design the first 90-day campaign calendar:
+          Month 1: Foundation
+          - Review generation campaign (3-touch post-visit sequence)
+          - Google Business Profile optimization posts (weekly)
+          - Social media content calendar (20 posts)
+          - Welcome email to existing patient list
+          Month 2: Growth
+          - Patient recall campaign for 18+ month lapsed patients
+          - Top-procedure promotional campaign (based on practice strengths)
+          - Blog content for top 3 SEO gaps
+          Month 3: Optimization
+          - A/B test top-performing campaigns
+          - Launch secondary procedure campaign
+          - Community engagement campaign
+        inputs:
+          - practice_intelligence_brief
+          - marketing_opportunity_list
+          - seo_baseline_report
+        outputs:
+          - 90_day_campaign_calendar
+          - campaign_briefs (one per campaign)
+          - content_requirements_list
+
+      - agent: quill
+        task: generate_launch_content
+        description: |
+          Write initial content for launch campaigns:
+          - 5 review request email/SMS templates (customized to practice voice)
+          - 10 social media posts for first 2 weeks
+          - Welcome email for existing patients
+          - 3 Google Business Profile posts
+          - Review response templates (positive: 5 variants, negative: 3 variants)
+          All content in practice's brand voice (derive from website tone).
+        inputs:
+          - practice_profile_v1
+          - campaign_briefs
+        outputs:
+          - content_package_v1
+          - brand_voice_guide_draft
+        kpis:
+          readability_score: "grade 6-8"
+          content_pieces_delivered: ">= 24"
+
+  # ── Stage 4: Executive Review & Launch (Hours 36-48) ──────────────────
+  - name: executive_review
+    description: Atlas reviews everything, creates the launch plan
+    duration: 12_hours
+    depends_on: [campaign_design]
+    agents:
+      - agent: atlas
+        task: review_and_approve_onboarding
+        description: |
+          Review all onboarding deliverables:
+          - Verify practice profile completeness and accuracy
+          - Review intelligence brief and tier recommendation
+          - Approve 90-day campaign calendar and budget allocation
+          - Review sample content for brand alignment
+          - Create launch checklist with go/no-go criteria
+          - Assign ongoing agent responsibilities for this practice
+          - Brief human account manager with executive summary
+          Escalate to Eugene if: practice is Platinum tier, or if
+          competitive landscape is unusually challenging.
+        inputs:
+          - practice_intelligence_brief
+          - 90_day_campaign_calendar
+          - content_package_v1
+          - seo_baseline_report
+        outputs:
+          - onboarding_approval_decision
+          - launch_checklist
+          - practice_agent_assignments
+          - human_briefing_document
+
+      - agent: relay
+        task: schedule_kickoff_meeting
+        description: |
+          Schedule and prepare for the practice kickoff meeting:
+          - Find available slot within 5 business days
+          - Create agenda: introductions, review findings, present 90-day plan,
+            content approval process, reporting cadence, Q&A
+          - Prepare presentation deck from intelligence brief and campaign plan
+          - Send invite with pre-read materials to practice owner
+        outputs:
+          - kickoff_meeting_scheduled
+          - kickoff_agenda
+          - kickoff_presentation
+
+completion_criteria:
+  - practice_profile completeness >= 90%
+  - data_pipelines connected >= 4 sources
+  - seo_baseline_report delivered
+  - 90_day_campaign_calendar approved
+  - content_package_v1 delivered with >= 24 pieces
+  - kickoff_meeting scheduled
+  - human_briefing_document sent to account manager
+
+notifications:
+  on_start:
+    - channel: slack
+      message: "🆕 New practice onboarding started: {practice_name}"
+  on_stage_complete:
+    - channel: slack
+      message: "✅ Onboarding stage '{stage_name}' complete for {practice_name}"
+  on_complete:
+    - channel: slack
+      message: "🎉 Onboarding complete for {practice_name}! Kickoff meeting: {kickoff_date}"
+    - channel: email
+      to: account_manager
+      subject: "{practice_name} Onboarding Complete — Kickoff {kickoff_date}"

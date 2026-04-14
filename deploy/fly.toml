@@ -1,0 +1,64 @@
+# NSG AI Swarm — Fly.io Configuration
+# Deploy: fly deploy --config deploy/fly.toml
+
+app = "nsg-paperclip"
+primary_region = "iad"  # US East (Virginia) — close to MacStadium and users
+
+[build]
+  dockerfile = "deploy/Dockerfile.fly"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  HOST = "0.0.0.0"
+  SERVE_UI = "true"
+  PAPERCLIP_HOME = "/paperclip"
+  PAPERCLIP_INSTANCE_ID = "default"
+  PAPERCLIP_DEPLOYMENT_MODE = "authenticated"
+  PAPERCLIP_DEPLOYMENT_EXPOSURE = "public"
+  PAPERCLIP_PUBLIC_URL = "https://nsg-paperclip.fly.dev"
+
+# Secrets (set via `fly secrets set`):
+#   BETTER_AUTH_SECRET=<random 64-char hex>
+#   DATABASE_URL=postgres://...  (Fly Postgres connection string)
+#   ANTHROPIC_API_KEY=sk-ant-...  (optional, for built-in adapters)
+#   OPENAI_API_KEY=sk-...  (optional, for Codex adapter)
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  path = "/api/health"
+  timeout = "5s"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 2
+
+[mounts]
+  source = "paperclip_data"
+  destination = "/paperclip"
+  initial_size = "1"  # 1 GB
+
+# Fly Postgres (attached separately)
+# Create with: fly postgres create --name nsg-paperclip-db --region iad
+# Attach with: fly postgres attach nsg-paperclip-db
+# This auto-sets DATABASE_URL as a secret
+
+[metrics]
+  port = 8080
+  path = "/api/health"

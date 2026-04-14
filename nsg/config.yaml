@@ -1,0 +1,277 @@
+# NSG AI Swarm Configuration
+# Default settings for the NSG AI Operations company on Paperclip
+
+# ── Company ──────────────────────────────────────────────────────
+company:
+  name: "NSG AI Operations"
+  description: "12-agent AI workforce automating marketing operations for 1,000+ vision care practices"
+  industry: "Healthcare Marketing — Ophthalmology, Optometry, Optical"
+  owner: "Eugene Shatsman"
+  website: "https://www.nationalstrategicgroup.com"
+
+# ── Paperclip Connection ──────────────────────────────────────────
+paperclip:
+  api_url: "${PAPERCLIP_API_URL:-http://localhost:3100}"
+  api_key: "${PAPERCLIP_API_KEY}"
+  company_slug: "nsg-ai-ops"
+
+# ── Agent Model Defaults ──────────────────────────────────────────
+# Each agent can be assigned a different model/adapter based on their needs
+agent_defaults:
+  # Executive agents — need strong reasoning and judgment
+  atlas:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-70b"
+    temperature: 0.3
+    max_tokens: 4096
+    description: "Strong reasoning for executive decisions and delegation"
+
+  athena:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-70b"
+    temperature: 0.4
+    max_tokens: 4096
+    description: "Client intelligence synthesis requires nuanced reasoning"
+
+  apollo:
+    adapter: openclaw
+    model: "openclaw-latest"
+    temperature: 0.3
+    max_tokens: 4096
+    description: "Campaign orchestration with strong tool-use capabilities"
+
+  oracle:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-70b"
+    temperature: 0.2
+    max_tokens: 8192
+    description: "Data analysis requires precision and longer context"
+
+  # Specialist agents — can use smaller/faster models for focused tasks
+  scout:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-8b"
+    temperature: 0.2
+    max_tokens: 4096
+    description: "Structured data gathering — fast and accurate"
+
+  echo:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-8b"
+    temperature: 0.1
+    max_tokens: 8192
+    description: "Transcript analysis — low temperature for accuracy, long context for transcripts"
+
+  muse:
+    adapter: openclaw
+    model: "openclaw-latest"
+    temperature: 0.7
+    max_tokens: 4096
+    description: "Campaign strategy — higher temperature for creative thinking"
+
+  quill:
+    adapter: openclaw
+    model: "openclaw-latest"
+    temperature: 0.8
+    max_tokens: 4096
+    description: "Content generation — highest temperature for creative writing"
+
+  flux:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-8b"
+    temperature: 0.1
+    max_tokens: 2048
+    description: "Data aggregation — fast, precise, structured output"
+
+  sentinel:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-8b"
+    temperature: 0.2
+    max_tokens: 2048
+    description: "Alert monitoring — fast classification, low latency"
+
+  compass:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-70b"
+    temperature: 0.3
+    max_tokens: 8192
+    description: "SEO auditing — needs strong technical analysis and long context for site crawls"
+
+  relay:
+    adapter: hermes_local
+    model: "hermes-3-llama-3.1-8b"
+    temperature: 0.3
+    max_tokens: 4096
+    description: "Meeting assistance — fast, organized, reliable"
+
+# ── Practice Tiers ──────────────────────────────────────────────
+practice_tiers:
+  platinum:
+    description: "High-revenue, multi-location, or flagship practices"
+    monthly_budget: 5000
+    meeting_cadence: weekly
+    review_target: 25
+    dedicated_account_manager: true
+    sla_response_hours: 2
+
+  gold:
+    description: "Mid-size practices with growth potential"
+    monthly_budget: 3000
+    meeting_cadence: biweekly
+    review_target: 15
+    dedicated_account_manager: true
+    sla_response_hours: 4
+
+  silver:
+    description: "Smaller practices or newer clients"
+    monthly_budget: 1500
+    meeting_cadence: monthly
+    review_target: 10
+    dedicated_account_manager: false
+    sla_response_hours: 8
+
+# ── Campaign Defaults ──────────────────────────────────────────
+campaigns:
+  review_generation:
+    touches: 3
+    channels: [sms, email]
+    conversion_target: 0.15
+    sending_window:
+      start: "09:00"
+      end: "19:00"
+    max_requests_per_patient_per_quarter: 2
+
+  patient_recall:
+    lapse_threshold_months: 18
+    critical_lapse_months: 24
+    touches: 5
+    channels: [sms, email, direct_mail]
+    reactivation_target: 0.12
+
+  email_marketing:
+    open_rate_target: 0.28
+    click_rate_target: 0.04
+    unsubscribe_threshold: 0.005  # pause if > 0.5% per send
+
+  social_media:
+    posts_per_month: 20
+    engagement_rate_target: 0.035
+    platforms: [facebook, instagram]
+    content_mix:
+      educational: 0.35
+      personality: 0.15
+      tips: 0.15
+      promotional: 0.10
+      community: 0.15
+      testimonial: 0.10
+
+# ── SEO & AI Readiness ──────────────────────────────────────────
+seo:
+  audit_cadence: quarterly
+  core_web_vitals:
+    lcp_target_ms: 2500
+    fid_target_ms: 100
+    cls_target: 0.1
+  gbp_photo_target: 50
+  gbp_post_cadence: weekly
+  schema_required:
+    - LocalBusiness
+    - Physician
+    - MedicalOrganization
+
+ai_readiness:
+  engines_monitored:
+    - chatgpt
+    - perplexity
+    - google_ai_overviews
+    - bing_copilot
+    - gemini
+  queries_per_market: 10
+  test_cadence: monthly
+  citation_rate_target: 0.50  # 50% of queries should cite the practice
+
+# ── Reporting ──────────────────────────────────────────────────
+reporting:
+  monthly_report_deadline_days: 5  # within 5 business days of month-end
+  quarterly_report_deadline_days: 7
+  dashboard_refresh_minutes: 15
+  key_metrics:
+    - google_review_count
+    - google_review_rating
+    - website_sessions
+    - organic_traffic_pct
+    - patient_calls
+    - email_open_rate
+    - social_engagement_rate
+    - ai_citation_rate
+    - cost_per_patient_acquired
+    - premium_procedure_conversions
+
+# ── Alerts & Monitoring ──────────────────────────────────────────
+alerts:
+  negative_review_detection_minutes: 15
+  metric_anomaly_threshold_pct: 25  # alert if metric changes > 25% week-over-week
+  severity_levels:
+    critical:
+      examples: ["1-star review mentioning malpractice", "HIPAA mention", "legal threat"]
+      response_sla_minutes: 30
+      escalate_to: human
+    high:
+      examples: ["1-2 star review", "traffic drop > 40%", "campaign failure"]
+      response_sla_hours: 4
+      escalate_to: atlas
+    medium:
+      examples: ["3-star review", "traffic drop 25-40%", "below-target campaign"]
+      response_sla_hours: 24
+      escalate_to: relevant_vp
+    low:
+      examples: ["minor metric dip", "competitor activity", "content suggestion"]
+      response_sla_hours: 48
+      batch_into: daily_digest
+
+# ── Compliance ──────────────────────────────────────────────────
+compliance:
+  hipaa:
+    no_patient_names_in_profiles: true
+    no_patient_conditions_in_marketing: true
+    no_phi_in_agent_logs: true
+  ftc:
+    no_fake_reviews: true
+    no_incentivized_reviews_without_disclosure: true
+  can_spam:
+    unsubscribe_in_all_emails: true
+    physical_address_in_emails: true
+  tcpa:
+    opt_in_required_for_sms: true
+    no_sms_before_9am: true
+    no_sms_after_9pm: true
+    honor_do_not_call: true
+
+# ── Pilot Practices ──────────────────────────────────────────────
+pilot_practices:
+  - name: "Levin Eye Care"
+    tier: gold
+    location: "Pikesville, MD"
+    specialty: ophthalmology
+    providers: 4
+    locations: 2
+    google_rating: 4.4
+    google_reviews: 287
+
+  - name: "Starwood Vision"
+    tier: platinum
+    location: "Dallas, TX"
+    specialty: multi_specialty
+    providers: 8
+    locations: 3
+    google_rating: 4.6
+    google_reviews: 523
+
+  - name: "Pacific Eye Associates"
+    tier: gold
+    location: "San Diego, CA"
+    specialty: ophthalmology
+    providers: 5
+    locations: 2
+    google_rating: 4.3
+    google_reviews: 341

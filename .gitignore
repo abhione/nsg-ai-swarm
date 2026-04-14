@@ -51,3 +51,8 @@ tests/release-smoke/test-results/
 tests/release-smoke/playwright-report/
 .superset/
 .claude/worktrees/
+workers/node_modules/
+workers/dist/
+nsg/demo/__pycache__/
+nsg/demo/*.mp4
+nsg/demo/segments/

@@ -1,0 +1,33 @@
+{
+  "name": "@nsg/workers",
+  "version": "0.1.0",
+  "description": "Orchestrator workers bridging Paperclip control plane with AI agent runtimes (OpenClaw, Hermes)",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "nsg-worker": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.18.0",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,235 @@
+# NSG AI Swarm Workflow: Patient Recall Sequence
+# Trigger: Practice has 100+ patients overdue 18+ months for annual exam
+# Duration: 30-day multi-touch sequence
+# Outcome: 12%+ reactivation rate (patients who book appointments)
+
+name: patient-recall-sequence
+description: Multi-touch campaign to reactivate lapsed patients who haven't visited in 18+ months
+trigger:
+  event: threshold.lapsed_patients
+  conditions:
+    lapsed_months: ">= 18"
+    eligible_count: ">= 100"
+  schedule: "0 9 * * 1"  # Check every Monday at 9 AM
+  manual_trigger: true
+
+parameters:
+  lapse_threshold_months: 18
+  critical_lapse_months: 24   # More urgent messaging for 24+ months
+  target_reactivation_rate: 0.12
+  max_touches: 5
+  sequence_duration_days: 30
+  channels: [sms, email, direct_mail]
+  appointment_booking_window_days: 45  # Track conversions up to 45 days
+  exclude_patients:
+    - deceased
+    - moved_away_confirmed
+    - opted_out
+    - do_not_contact
+    - active_patient (visit in last 12 months)
+
+stages:
+  # ── Stage 1: Patient List & Segmentation (Day 0) ──────────────────
+  - name: segment
+    description: Pull lapsed patient lists and segment by urgency and value
+    duration: 4_hours
+    agents:
+      - agent: flux
+        task: pull_lapsed_patient_data
+        description: |
+          For the target practice, pull all lapsed patients:
+          - Last visit date, provider seen, procedures performed
+          - Age, insurance type (vision vs. medical)
+          - Conditions on file (diabetic, glaucoma suspect, macular degeneration)
+          - Lifetime value (total billed in last 3 years)
+          - Previous recall attempts and responses
+          
+          Segment into cohorts:
+          A) HIGH PRIORITY — Chronic condition patients (diabetic retinopathy,
+             glaucoma) overdue for monitoring. These patients face real health
+             risk from skipping appointments.
+          B) HIGH VALUE — Premium procedure candidates (cataract-age patients
+             55+, LASIK-age 25-45) who haven't been seen. Revenue opportunity.
+          C) STANDARD — Annual exam patients with no special conditions.
+             Important for practice revenue but lower urgency.
+          D) CRITICAL LAPSE — Anyone 24+ months overdue, regardless of category.
+             They may have found another provider.
+        outputs:
+          - segmented_patient_lists
+          - segment_summary (counts, avg lapse duration, insurance mix)
+          - estimated_revenue_recovery
+
+      - agent: muse
+        task: design_recall_sequences
+        description: |
+          Design tailored recall sequences per segment:
+          
+          Segment A (Chronic Condition — Health-Urgency Messaging):
+            Touch 1 (SMS, Day 1): "[FirstName], Dr. [LastName] recommends
+              annual monitoring for [condition]. It's been [months] months.
+              Book today: [link]"
+            Touch 2 (Email, Day 5): Clinical education angle — why monitoring
+              matters for their condition, what can happen if they skip.
+            Touch 3 (SMS, Day 12): "Your eye health can't wait. [Practice]
+              has openings this week: [link]"
+            Touch 4 (Direct mail, Day 18): Physical letter from the doctor.
+              Higher cost but 3x response rate for this segment.
+            Touch 5 (Phone call, Day 25): If still no response, flag for
+              human outreach by practice staff.
+          
+          Segment B (High Value — Benefits Messaging):
+            Touch 1 (Email, Day 1): "New technology at [Practice]" angle.
+              Highlight new equipment or procedures since their last visit.
+            Touch 2 (SMS, Day 5): "[FirstName], your insurance covers an
+              annual eye exam. Don't let it go to waste! Book: [link]"
+            Touch 3 (Email, Day 14): Premium procedure education
+              (LASIK freedom, premium IOL lifestyle benefits).
+            Touch 4 (SMS, Day 21): Limited availability / urgency.
+          
+          Segment C (Standard — Convenience Messaging):
+            Touch 1 (Email, Day 1): "It's been a while!" friendly reminder.
+            Touch 2 (SMS, Day 7): Insurance reminder + easy booking link.
+            Touch 3 (Email, Day 18): New services or team member introduction.
+          
+          Segment D (Critical Lapse — Win-Back):
+            Touch 1 (Email, Day 1): "We miss you at [Practice]" with
+              what's new since their last visit.
+            Touch 2 (SMS, Day 4): Direct, personal: "Dr. [LastName] wanted
+              us to reach out. It's been [months] months."
+            Touch 3 (Direct mail, Day 10): Handwritten-style note from doctor.
+            Touch 4 (SMS, Day 20): Final attempt with special offer
+              (if practice approves, e.g., complimentary dry eye screening).
+        outputs:
+          - recall_sequence_designs (per segment)
+          - channel_allocation_plan
+          - direct_mail_requirements
+
+  # ── Stage 2: Content Generation (Day 0-1) ──────────────────
+  - name: content
+    description: Generate all recall content
+    duration: 8_hours
+    depends_on: [segment]
+    agents:
+      - agent: quill
+        task: write_recall_content
+        description: |
+          Write all content for the recall sequences:
+          - SMS messages: under 160 characters, personal, clear CTA
+          - Emails: subject lines (3 variants each), body copy, mobile-optimized
+          - Direct mail: letter copy, envelope teaser copy
+          - Personalization tokens: [FirstName], [LastName], [Provider],
+            [LastVisitDate], [MonthsSinceVisit], [Condition], [Practice], [Link]
+          
+          Voice guidelines per segment:
+          - Chronic condition: caring, medically informed, slightly urgent
+          - High value: exciting, forward-looking, benefit-focused
+          - Standard: friendly, casual, no-pressure
+          - Critical lapse: warm, personal, "we miss you"
+          
+          Include opt-out language in all messages.
+          Readability: grade 6 for SMS, grade 7 for email.
+        inputs:
+          - recall_sequence_designs
+          - practice profile (for brand voice)
+        outputs:
+          - recall_content_package
+          - subject_line_variants
+
+  # ── Stage 3: Execution (Days 1-30) ──────────────────
+  - name: execute
+    description: Execute the multi-touch recall sequences
+    duration: 30_days
+    depends_on: [content]
+    agents:
+      - agent: apollo
+        task: orchestrate_recall_sends
+        description: |
+          Execute recall sequences per the designed schedule:
+          - Stagger start dates across patient cohorts (avoid overwhelming
+            practice phone lines — max 50 expected calls per day)
+          - Trigger each touch per schedule, respecting:
+            * Sending windows (9 AM - 7 PM practice local time)
+            * If patient books appointment, remove from sequence immediately
+            * If patient opts out, remove immediately and log
+            * If SMS undeliverable, fall back to email
+          - Monitor delivery rates, bounce rates, opt-out rates
+          - Pause sequence for any practice if opt-out rate exceeds 3%
+          - Weekly progress report: sent/delivered/opened/clicked/booked per segment
+        inputs:
+          - segmented_patient_lists
+          - recall_content_package
+        outputs:
+          - send_log
+          - weekly_progress_reports
+
+      - agent: sentinel
+        task: monitor_recall_performance
+        description: |
+          Monitor recall campaign in real-time:
+          - Track appointment bookings attributed to recall (match patient IDs)
+          - Alert if any segment conversion drops below 5% after 100+ sends
+          - Alert if opt-out rate exceeds 2% for any segment
+          - Alert if delivery failure rate exceeds 5%
+          - Track competitor recall activity (if visible)
+          - Monitor for negative responses (angry replies to SMS/email)
+          - Daily booking tracker: appointments booked vs. target
+        outputs:
+          - performance_alerts
+          - daily_booking_tracker
+
+  # ── Stage 4: Analysis & Revenue Attribution (Day 30-35) ──────────────────
+  - name: analyze
+    description: Final analysis and revenue impact calculation
+    duration: 5_days
+    depends_on: [execute]
+    agents:
+      - agent: oracle
+        task: recall_campaign_analysis
+        description: |
+          Comprehensive recall campaign analysis:
+          
+          Per-segment performance:
+          - Patients contacted / responded / booked / attended
+          - Conversion rate by segment, channel, touch number
+          - Which touch point drove the most conversions
+          - Cost per reactivated patient (channel costs / appointments booked)
+          
+          Revenue impact:
+          - Estimated revenue from reactivated patients:
+            * Comprehensive exam: ~$200 average
+            * Cataract evaluation → surgery: ~$3,000-5,000 per eye
+            * Glaucoma management: ~$400/year ongoing
+            * LASIK consultation → surgery: ~$4,000-5,000
+          - Project annual revenue from reactivated patients
+          - ROI calculation: campaign cost vs. projected revenue
+          
+          Optimization recommendations:
+          - Best-performing subject lines and SMS copy
+          - Optimal send times by demographic
+          - Segment-specific channel preference
+          - Recommendations for next recall wave
+        outputs:
+          - recall_performance_report
+          - revenue_attribution_report
+          - optimization_recommendations
+
+completion_criteria:
+  - all eligible patients received at least Touch 1
+  - reactivation rate >= 10% (stretch: 12%)
+  - all booked appointments tracked and attributed
+  - performance report delivered within 5 days of sequence end
+  - revenue impact estimated
+
+notifications:
+  on_start:
+    - channel: slack
+      message: "📞 Patient recall campaign started for {practice_name}: {patient_count} lapsed patients"
+  daily_booking:
+    - channel: slack
+      message: "📅 Recall bookings today for {practice_name}: {bookings_today} (total: {bookings_total}, target: {bookings_target})"
+  on_milestone:
+    - channel: slack
+      message: "🎯 {practice_name} recall hit {reactivation_rate}% reactivation ({bookings_total} appointments)"
+  on_complete:
+    - channel: slack
+      message: "✅ Recall campaign complete for {practice_name}: {bookings_total} patients reactivated ({reactivation_rate}%), est. revenue: ${revenue_estimate}"

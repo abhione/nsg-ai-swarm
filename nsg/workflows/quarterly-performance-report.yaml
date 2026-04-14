@@ -1,0 +1,289 @@
+# NSG AI Swarm Workflow: Quarterly Performance Report
+# Trigger: End of quarter (last week of Mar, Jun, Sep, Dec)
+# Duration: 7 business days
+# Outcome: Executive performance deck covering all practices and portfolio trends
+
+name: quarterly-performance-report
+description: Cross-practice quarterly performance analysis and executive reporting
+trigger:
+  schedule: "0 8 25 3,6,9,12 *"  # 8 AM on the 25th of quarter-end months
+  manual_trigger: true
+
+parameters:
+  report_period: last_90_days
+  comparison_periods:
+    - previous_quarter
+    - same_quarter_last_year
+  practice_segments:
+    - by_tier: [platinum, gold, silver]
+    - by_specialty: [ophthalmology, optometry, optical, multi_specialty]
+    - by_size: [solo, small_group, large_group]
+    - by_tenure: [new_0_6mo, established_6_12mo, mature_12mo_plus]
+  report_outputs:
+    - executive_summary (for Eugene)
+    - practice_scorecards (for account managers)
+    - portfolio_deck (for leadership team)
+    - agent_performance_report (internal)
+
+stages:
+  # ── Stage 1: Data Aggregation (Days 1-2) ──────────────────
+  - name: data_pull
+    description: Aggregate all data sources for the quarter
+    duration: 2_days
+    agents:
+      - agent: flux
+        task: quarterly_data_aggregation
+        description: |
+          Pull and normalize all data for the reporting quarter:
+          
+          Per-practice metrics:
+          - Google Reviews: count added, avg rating, rating change, response rate
+          - Website: sessions, users, organic traffic, bounce rate, top pages,
+            conversion events (calls, form fills, appointment bookings)
+          - Google Business Profile: impressions, search queries, clicks to
+            website, clicks to call, direction requests
+          - Social Media: followers gained, reach, engagement rate, top posts
+          - Email Marketing: campaigns sent, open rate, click rate, unsub rate
+          - Patient Metrics: new patients (if available from PMS), recall
+            reactivations, procedure consultations
+          - Call Tracking: total calls, calls from organic, calls from paid,
+            avg call duration
+          - Paid Advertising: spend, impressions, clicks, CTR, CPC, conversions
+          
+          Cross-practice aggregations:
+          - Portfolio totals and averages for every metric
+          - Cohort averages (by tier, specialty, size, tenure)
+          - Quarter-over-quarter changes
+          - Year-over-year changes (if data available)
+        outputs:
+          - quarterly_data_warehouse_export
+          - data_quality_report
+        kpis:
+          data_completeness: ">= 95%"
+          practices_with_full_data: ">= 90%"
+
+  # ── Stage 2: Analysis & Insights (Days 2-4) ──────────────────
+  - name: analysis
+    description: Deep analysis, benchmarking, and insight extraction
+    duration: 2_days
+    depends_on: [data_pull]
+    agents:
+      - agent: oracle
+        task: quarterly_performance_analysis
+        description: |
+          Comprehensive quarterly analysis:
+          
+          1. PORTFOLIO HEALTH DASHBOARD
+          - Total practices managed: {count}
+          - Portfolio-wide Google rating: {avg} (change: {delta})
+          - Total new reviews this quarter: {count}
+          - Total website sessions: {count} (organic: {pct}%)
+          - Total patient calls tracked: {count}
+          - Total email subscribers: {count}
+          - Estimated new patients attributed to marketing: {count}
+          
+          2. TOP PERFORMERS (top 10 by composite score)
+          For each: practice name, key metrics, what's working, replicable tactics
+          
+          3. UNDERPERFORMERS (bottom 10 by composite score)
+          For each: practice name, key metrics, root cause analysis, recommended interventions
+          
+          4. TREND ANALYSIS
+          - Review velocity trends (accelerating? decelerating?)
+          - Organic traffic trends (Google algorithm impact?)
+          - AI answer engine citation trends (growing? which engines?)
+          - Patient acquisition cost trends
+          - Premium procedure conversion trends
+          - Email engagement trends (fatigue signals?)
+          
+          5. COHORT BENCHMARKS
+          - Performance by practice tier (do Platinum practices outperform?)
+          - Performance by tenure (do newer practices ramp faster with AI swarm?)
+          - Performance by specialty (ophthalmology vs. optometry differences)
+          
+          6. COMPETITIVE LANDSCAPE
+          - How NSG practices compare to non-NSG practices in same markets
+          - Emerging competitive threats
+          - Market share shifts
+          
+          7. AI ANSWER ENGINE REPORT
+          - Portfolio citation rate: {pct}% of practices cited
+          - Quarter-over-quarter change
+          - Which engines cite most frequently
+          - What content types drive citations
+          - Practices with zero citations (risk list)
+        outputs:
+          - quarterly_analysis_document
+          - performance_rankings
+          - trend_reports
+          - ai_engine_report
+
+      - agent: compass
+        task: quarterly_seo_trends
+        description: |
+          SEO-specific quarterly analysis:
+          - Portfolio keyword ranking changes (improved/declined/stable)
+          - Core Web Vitals portfolio trends
+          - Google algorithm update impact assessment
+          - Content performance (which new pages drove traffic?)
+          - Backlink profile changes
+          - Local pack ranking trends
+          Feed into Oracle's master analysis.
+        outputs:
+          - seo_trend_report
+
+      - agent: echo
+        task: client_sentiment_analysis
+        description: |
+          Analyze client sentiment from all meetings this quarter:
+          - Overall sentiment trend (improving/declining/stable)
+          - Top concerns raised across practices (themed)
+          - Top praise themes
+          - Practices showing satisfaction decline (churn risk)
+          - Practices showing enthusiasm increase (upsell opportunity)
+          - Quotes from clients that illustrate key themes
+        outputs:
+          - client_sentiment_report
+
+  # ── Stage 3: Report Generation (Days 4-6) ──────────────────
+  - name: generate_reports
+    description: Create all report deliverables
+    duration: 2_days
+    depends_on: [analysis]
+    agents:
+      - agent: oracle
+        task: build_executive_deck
+        description: |
+          Create the quarterly executive performance deck:
+          
+          Slide 1: Title — "NSG AI Operations: Q{quarter} {year} Performance"
+          Slide 2: Executive Summary — 5 key takeaways in bullet format
+          Slide 3: Portfolio Dashboard — key metrics with QoQ arrows
+          Slide 4: Review Performance — charts: total reviews, avg rating, velocity
+          Slide 5: Digital Performance — website traffic, organic growth, conversions
+          Slide 6: AI Readiness — citation rates, engine coverage, trend chart
+          Slide 7: Campaign Performance — email, social, recall campaign results
+          Slide 8: Top Performers — top 5 practices with key metrics
+          Slide 9: Attention Needed — bottom 5 practices with intervention plans
+          Slide 10: Client Sentiment — satisfaction trends, key themes
+          Slide 11: Competitive Landscape — market position vs. non-NSG practices
+          Slide 12: AI Swarm Performance — agent metrics, automation rates, cost savings
+          Slide 13: Next Quarter Priorities — top 5 strategic initiatives
+          Slide 14: Appendix — detailed data tables
+          
+          Design: clean, data-heavy, NSG brand colors. Charts over text.
+        outputs:
+          - executive_deck_pdf
+          - executive_deck_data
+
+      - agent: quill
+        task: write_practice_scorecards
+        description: |
+          For each practice, generate a 1-page performance scorecard:
+          
+          Header: Practice name, tier, account manager
+          Metrics Grid (with QoQ change indicators):
+          - Google Rating: {rating} ({delta})
+          - New Reviews: {count}
+          - Website Sessions: {count} ({pct_change}%)
+          - Organic Traffic: {count} ({pct_change}%)
+          - Patient Calls: {count} ({pct_change}%)
+          - Email Open Rate: {pct}%
+          - Social Engagement: {pct}%
+          - AI Citations: {count} of {tested} queries
+          
+          Performance vs. Benchmark: bar chart comparing to portfolio median
+          
+          Highlights: top 3 wins this quarter
+          Opportunities: top 3 improvement areas
+          Next Quarter Focus: 3 recommended priorities
+          
+          Format: PDF, practice-branded where possible.
+        outputs:
+          - practice_scorecards (per practice, PDF)
+
+      - agent: oracle
+        task: agent_performance_report
+        description: |
+          Internal report on AI swarm performance:
+          
+          Per-agent metrics:
+          - Issues completed / assigned (throughput)
+          - Average completion time
+          - Error rate (required human correction)
+          - Cost (token usage / API costs)
+          
+          Swarm-wide metrics:
+          - Total issues processed this quarter
+          - Automation rate (issues handled without human intervention)
+          - Cost per practice per month
+          - Cost savings vs. manual operations estimate
+          - Agent uptime and reliability
+          
+          Recommendations:
+          - Agents needing model upgrades
+          - Agents needing prompt refinements
+          - New tools or integrations needed
+          - Capacity planning for next quarter
+        outputs:
+          - agent_performance_report
+
+  # ── Stage 4: Review & Distribution (Days 6-7) ──────────────────
+  - name: distribute
+    description: Executive review and distribution
+    duration: 1_day
+    depends_on: [generate_reports]
+    agents:
+      - agent: atlas
+        task: review_and_approve_quarterly
+        description: |
+          Review all quarterly deliverables:
+          - Verify executive deck accuracy and narrative coherence
+          - Review practice scorecards for any sensitive findings
+          - Approve agent performance report and recommendations
+          - Add strategic commentary for Eugene
+          - Flag any practices requiring urgent human attention
+          - Set Q+1 goals and priorities for the swarm
+        outputs:
+          - approved_executive_deck
+          - approved_practice_scorecards
+          - q_plus_1_goals
+          - atlas_strategic_notes
+
+      - agent: relay
+        task: distribute_quarterly_reports
+        description: |
+          Distribution plan:
+          - Eugene: executive deck + strategic notes (email + Slack)
+          - Account managers: practice scorecards for their practices (email)
+          - Practice owners: scorecards via account managers (do NOT send directly
+            without AM review)
+          - Internal team: agent performance report (Slack)
+          - Schedule QBR meetings for top 20 practices (by revenue tier)
+          - Create Q+1 goal issues in Paperclip
+        outputs:
+          - distribution_complete
+          - qbr_meetings_scheduled
+          - q_plus_1_issues_created
+
+completion_criteria:
+  - executive deck delivered to Eugene
+  - scorecards generated for 100% of practices
+  - agent performance report completed
+  - QBR meetings scheduled for top 20 practices
+  - Q+1 goals created in Paperclip
+
+notifications:
+  on_start:
+    - channel: slack
+      message: "📊 Q{quarter} {year} quarterly report generation started"
+  on_stage_complete:
+    - channel: slack
+      message: "✅ Report stage '{stage_name}' complete"
+  on_complete:
+    - channel: slack
+      message: "📈 Q{quarter} quarterly reports complete and distributed. Portfolio rating: {avg_rating}, reviews: {total_reviews}, AI citation rate: {citation_rate}%"
+    - channel: email
+      to: eugene
+      subject: "Q{quarter} {year} NSG AI Operations Performance Report"
+      attachments: [executive_deck_pdf]

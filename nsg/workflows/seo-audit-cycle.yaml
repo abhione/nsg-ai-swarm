@@ -1,0 +1,310 @@
+# NSG AI Swarm Workflow: SEO + AI Readiness Audit Cycle
+# Trigger: Quarterly (1st of Jan, Apr, Jul, Oct)
+# Duration: 10 business days
+# Outcome: Every practice audited for SEO health and AI answer engine visibility
+
+name: seo-audit-cycle
+description: Quarterly comprehensive SEO and AI answer engine readiness audit for all practices
+trigger:
+  schedule: "0 8 1 1,4,7,10 *"  # 8 AM on Jan 1, Apr 1, Jul 1, Oct 1
+  manual_trigger: true
+
+parameters:
+  audit_scope:
+    technical_seo: true
+    content_seo: true
+    local_seo: true
+    google_business_profile: true
+    ai_answer_engines: true
+    competitor_benchmarks: true
+  ai_engines_tested:
+    - chatgpt
+    - perplexity
+    - google_ai_overviews
+    - bing_copilot
+    - gemini
+  test_queries_per_market:
+    - "best {specialty} near {city}"
+    - "{specialty} {city}"
+    - "best cataract surgeon {city}"
+    - "lasik {city} cost"
+    - "pediatric eye doctor {city}"
+    - "glaucoma specialist near me"  # tested from practice geo
+    - "eye doctor accepting {insurance} {city}"
+    - "emergency eye care {city}"
+    - "dry eye treatment {city}"
+    - "best eye doctor reviews {city}"
+  scoring:
+    technical_seo_weight: 0.20
+    content_seo_weight: 0.20
+    local_seo_weight: 0.20
+    gbp_weight: 0.20
+    ai_readiness_weight: 0.20
+
+stages:
+  # ── Stage 1: Technical Crawl & Data Collection (Days 1-3) ──────────
+  - name: crawl
+    description: Automated technical audits and AI engine testing
+    duration: 3_days
+    agents:
+      - agent: compass
+        task: technical_seo_audit
+        description: |
+          For each practice website, run comprehensive technical audit:
+          
+          Core Web Vitals (via PageSpeed Insights API):
+          - Largest Contentful Paint (LCP) — target: <2.5s
+          - First Input Delay (FID) — target: <100ms
+          - Cumulative Layout Shift (CLS) — target: <0.1
+          - Test both mobile and desktop
+          
+          Technical Fundamentals:
+          - HTTPS enabled and properly configured
+          - Mobile-responsive design
+          - XML sitemap present and submitted to Search Console
+          - Robots.txt properly configured
+          - No critical crawl errors (4xx, 5xx pages)
+          - Canonical tags properly set
+          - Internal linking structure
+          - Image optimization (alt tags, compression, WebP)
+          - Page load speed (time to first byte, total load)
+          
+          Structured Data:
+          - LocalBusiness schema present and valid
+          - Physician/MedicalOrganization schema
+          - MedicalProcedure schema for key services
+          - FAQ schema on relevant pages
+          - Review/AggregateRating schema
+          
+          Indexation:
+          - Total indexed pages (via site: search)
+          - Pages with thin content (<300 words)
+          - Duplicate content issues
+          - Pages excluded from index
+        outputs:
+          - technical_audit_results (per practice)
+
+      - agent: compass
+        task: ai_answer_engine_testing
+        description: |
+          Test each practice's visibility in AI answer engines:
+          
+          For each practice market, run 10 test queries across 5 AI engines.
+          For each query, record:
+          - Was the practice mentioned? (yes/no)
+          - Position in the response (1st mentioned, 2nd, 3rd, etc.)
+          - What was said about the practice (quote the text)
+          - Was the information accurate?
+          - What sources did the AI cite?
+          - Which competitors were mentioned instead?
+          
+          Test from the practice's geographic location (use location spoofing).
+          Run each query 3 times to check consistency.
+          
+          AI Readiness Score calculation:
+          - Citation rate: % of queries where practice was mentioned
+          - Accuracy rate: % of citations with correct information
+          - Prominence: average position when mentioned
+          - Coverage: % of AI engines that mention the practice
+          - Competitor gap: how many competitors cited more frequently
+        outputs:
+          - ai_citation_results (per practice, per engine)
+          - ai_readiness_scores
+
+      - agent: flux
+        task: pull_search_console_data
+        description: |
+          Pull Google Search Console data for each practice:
+          - Total impressions, clicks, CTR, average position (last 90 days)
+          - Top queries driving traffic (top 50 per practice)
+          - Query trend analysis: growing vs. declining queries
+          - Page-level performance for key service pages
+          - Mobile vs. desktop performance split
+          - Compare to previous quarter
+        outputs:
+          - search_console_data (per practice)
+
+  # ── Stage 2: Content & Local SEO Analysis (Days 3-5) ──────────────
+  - name: content_analysis
+    description: Evaluate content quality, gaps, and local SEO signals
+    duration: 2_days
+    depends_on: [crawl]
+    agents:
+      - agent: compass
+        task: content_seo_audit
+        description: |
+          Content analysis for each practice website:
+          
+          Content Inventory:
+          - Total pages, word counts, last updated dates
+          - Service/procedure pages: completeness and depth
+          - Blog/resource section: frequency, topics, quality
+          - Doctor bio pages: E-E-A-T signals (credentials, experience, affiliations)
+          
+          Content Gap Analysis:
+          - Compare to top 3 local competitors' content
+          - Identify missing procedure/condition pages
+          - Identify missing FAQ content (map to common patient questions)
+          - Check for content relevant to AI engines (comprehensive, authoritative,
+            well-structured with headers, lists, and clear answers)
+          
+          Content Quality Signals:
+          - Readability scores
+          - Unique vs. templated content
+          - Internal linking between related services
+          - Call-to-action presence and clarity
+          - Patient education value
+          
+          Local Content:
+          - Location-specific content (city/neighborhood mentions)
+          - Local landmark and community references
+          - Service area pages (if multi-location)
+        outputs:
+          - content_audit_results (per practice)
+          - content_gap_reports
+          - priority_content_recommendations
+
+      - agent: compass
+        task: gbp_and_local_seo_audit
+        description: |
+          Google Business Profile and local SEO audit:
+          
+          GBP Completeness:
+          - Business name, address, phone (NAP consistency)
+          - Categories (primary + secondary)
+          - Services list (all offered services)
+          - Business description (750 chars, keyword-rich)
+          - Photos (count, recency, variety: exterior, interior, team, procedures)
+            Target: 50+ photos
+          - Q&A section (questions answered, proactive FAQ seeding)
+          - Google Posts (frequency, engagement)
+          - Reviews (count, rating, response rate, response time)
+          - Attributes (accessibility, amenities, etc.)
+          - Hours (verified, holiday hours set)
+          - Appointment link working
+          
+          Local SEO Signals:
+          - NAP consistency across directories (Yelp, Healthgrades, Vitals,
+            Zocdoc, Yellow Pages, Bing Places, Apple Maps)
+          - Citation count and quality
+          - Local backlink profile
+          - Google Maps ranking for key terms
+        outputs:
+          - gbp_audit_results (per practice)
+          - local_seo_scores
+          - citation_consistency_report
+
+  # ── Stage 3: Scoring & Reporting (Days 5-8) ──────────────────
+  - name: report
+    description: Calculate scores, generate reports, prioritize fixes
+    duration: 3_days
+    depends_on: [content_analysis]
+    agents:
+      - agent: oracle
+        task: compile_seo_scorecards
+        description: |
+          For each practice, calculate composite SEO + AI Readiness Score:
+          
+          Score Components (weighted):
+          - Technical SEO Score (20%): CWV, mobile, HTTPS, schema, speed
+          - Content SEO Score (20%): depth, gaps, quality, freshness
+          - Local SEO Score (20%): NAP consistency, citations, Maps ranking
+          - GBP Score (20%): completeness, reviews, photos, posts, Q&A
+          - AI Readiness Score (20%): citation rate, accuracy, coverage
+          
+          Generate per-practice scorecard:
+          - Overall score (0-100)
+          - Component scores with letter grades (A-F)
+          - Quarter-over-quarter trend (improved/declined/stable)
+          - Priority fix list (ranked by estimated patient impact)
+          - Estimated traffic/patient impact of implementing fixes
+          
+          Generate portfolio report:
+          - Distribution of scores (histogram)
+          - Top 10 / Bottom 10 practices
+          - Most common issues across portfolio
+          - AI readiness trends (quarter-over-quarter)
+          - Competitive landscape shifts
+          - Strategic recommendations for Eugene
+        outputs:
+          - practice_scorecards (per practice)
+          - portfolio_seo_report
+          - priority_fix_matrix
+
+      - agent: muse
+        task: create_fix_implementation_plans
+        description: |
+          For each practice's top 5 priority fixes, create implementation briefs:
+          - What to fix (specific, actionable)
+          - Why it matters (estimated patient/revenue impact)
+          - How to fix (step-by-step for web team)
+          - Estimated effort (hours)
+          - Expected timeline
+          - How to verify the fix worked
+          
+          Group fixes into:
+          - Quick wins (< 2 hours, high impact)
+          - Medium projects (2-8 hours)
+          - Major initiatives (multi-week, requires strategy)
+        outputs:
+          - implementation_plans (per practice)
+          - quick_wins_list (portfolio-wide)
+
+  # ── Stage 4: Review & Distribution (Days 8-10) ──────────────────
+  - name: distribute
+    description: Executive review and distribution to practices
+    duration: 2_days
+    depends_on: [report]
+    agents:
+      - agent: atlas
+        task: review_and_approve_audit
+        description: |
+          Review portfolio SEO report and scorecards:
+          - Verify scoring methodology consistency
+          - Review top recommendations for strategic alignment
+          - Approve portfolio report for Eugene
+          - Flag any practices requiring urgent intervention
+          - Allocate resources for fix implementation
+          - Set targets for next quarter's audit
+        inputs:
+          - portfolio_seo_report
+          - practice_scorecards
+          - priority_fix_matrix
+        outputs:
+          - approved_portfolio_report
+          - resource_allocation_plan
+          - next_quarter_targets
+
+      - agent: relay
+        task: distribute_reports
+        description: |
+          Distribute audit results:
+          - Send practice-specific scorecards to account managers
+          - Schedule review meetings for bottom-10 practices
+          - Send portfolio summary to Eugene
+          - Create Paperclip issues for all quick-win fixes
+          - Update practice meeting agendas with SEO discussion points
+        outputs:
+          - distribution_log
+          - fix_issues_created
+
+completion_criteria:
+  - 100% of practices audited across all 5 dimensions
+  - AI answer engine tested for all practice markets
+  - all scorecards generated and approved
+  - portfolio report delivered to Eugene
+  - quick-win fix issues created in Paperclip
+
+notifications:
+  on_start:
+    - channel: slack
+      message: "🔍 Q{quarter} SEO + AI Readiness audit cycle started for {practice_count} practices"
+  on_stage_complete:
+    - channel: slack
+      message: "✅ Audit stage '{stage_name}' complete"
+  on_complete:
+    - channel: slack
+      message: "📊 Q{quarter} audit complete. Portfolio avg score: {avg_score}/100. AI citation rate: {ai_citation_rate}%"
+    - channel: email
+      to: eugene
+      subject: "Q{quarter} SEO + AI Readiness Audit — Portfolio Score: {avg_score}/100"

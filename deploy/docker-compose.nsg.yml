@@ -1,0 +1,94 @@
+# NSG AI Swarm — Docker Compose for Local Deployment
+# Runs Paperclip + PostgreSQL + Worker for the NSG vision care marketing swarm
+#
+# Usage:
+#   cd <repo-root>
+#   docker compose -f deploy/docker-compose.nsg.yml up --build
+#
+# Prerequisites:
+#   - Docker and Docker Compose v2
+#   - Copy deploy/.env.nsg.example to deploy/.env.nsg and fill in secrets
+#
+# Access:
+#   - Paperclip UI: http://localhost:3100
+#   - API: http://localhost:3100/api
+#   - Postgres: localhost:5432
+
+services:
+  # ---------- PostgreSQL ----------
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-paperclip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.nsg}
+      POSTGRES_DB: ${POSTGRES_DB:-paperclip}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paperclip} -d ${POSTGRES_DB:-paperclip}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - nsg-internal
+
+  # ---------- Paperclip Server ----------
+  paperclip:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PAPERCLIP_PORT:-3100}:3100"
+    environment:
+      # Database
+      DATABASE_URL: postgres://${POSTGRES_USER:-paperclip}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-paperclip}
+
+      # Server
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3100
+      SERVE_UI: "true"
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_INSTANCE_ID: default
+
+      # Auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env.nsg}
+      PAPERCLIP_DEPLOYMENT_MODE: ${PAPERCLIP_DEPLOYMENT_MODE:-authenticated}
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: ${PAPERCLIP_DEPLOYMENT_EXPOSURE:-private}
+      PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}
+
+      # Optional: LLM API keys for built-in adapters
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+    volumes:
+      - paperclip-data:/paperclip
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3100/api/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    networks:
+      - nsg-internal
+
+volumes:
+  pgdata:
+    name: nsg-pgdata
+  paperclip-data:
+    name: nsg-paperclip-data
+
+networks:
+  nsg-internal:
+    name: nsg-internal
+    driver: bridge

@@ -1,0 +1,204 @@
+# NSG AI Swarm Workflow: Monthly Review Generation Campaign
+# Trigger: 1st of every month (automated)
+# Duration: Ongoing throughout the month
+# Outcome: 15+ new Google reviews per practice per month
+
+name: monthly-review-campaign
+description: Automated monthly review generation blitz across all active practices
+trigger:
+  schedule: "0 8 1 * *"  # 8:00 AM on the 1st of every month
+  manual_trigger: true     # Can also be triggered manually per practice
+
+parameters:
+  target_reviews_per_practice: 15
+  review_request_conversion_target: 0.15  # 15% of requests → reviews
+  max_requests_per_patient_per_quarter: 2
+  request_channels: [sms, email]
+  review_platforms: [google, healthgrades]  # Google primary, Healthgrades secondary
+  sending_window:
+    start: "09:00"
+    end: "19:00"
+    timezone: practice_local
+  exclude_patients:
+    - opted_out
+    - reviewed_in_last_90_days
+    - active_complaint
+
+stages:
+  # ── Stage 1: Campaign Preparation (Day 1) ──────────────────
+  - name: prepare
+    description: Pull patient lists, customize templates, prepare sequences
+    duration: 1_day
+    agents:
+      - agent: flux
+        task: pull_patient_lists
+        description: |
+          For each active practice, pull the eligible patient list:
+          - Patients with visits in the last 30 days
+          - Exclude: patients who reviewed in last 90 days, opted-out patients,
+            patients with active complaints or billing disputes
+          - Exclude: patients who received 2+ review requests this quarter
+          - Prioritize: patients who had premium procedures (cataract with IOL,
+            LASIK, cosmetic) — these tend to leave more detailed reviews
+          - Include: patient first name, phone, email, provider seen, visit date,
+            procedure type
+          Report: eligible patient count per practice, estimated review yield.
+        outputs:
+          - eligible_patient_lists (per practice)
+          - estimated_yield_report
+
+      - agent: muse
+        task: customize_campaign_per_practice
+        description: |
+          For each practice, customize the review campaign:
+          - Select template variant based on practice personality
+            (warm/casual for family optometry, professional/clinical for surgical)
+          - Set channel mix (SMS-first for practices with high text engagement,
+            email-first for older demographics)
+          - Determine timing: space requests across the month to avoid review
+            clustering (Google may flag unnatural patterns)
+          - If practice rating < 4.5: add pre-screening step (satisfaction
+            check before review link — route unhappy patients to feedback form)
+          - Set practice-specific targets based on patient volume
+        inputs:
+          - eligible_patient_lists
+          - practice profiles
+        outputs:
+          - campaign_configs (per practice)
+
+      - agent: quill
+        task: generate_review_request_content
+        description: |
+          Generate personalized review request content for each practice:
+          Touch 1 (SMS, Day 0, 2 hours post-visit):
+            "[FirstName], thank you for visiting [Practice]! If Dr. [LastName]
+             took great care of you, we'd love a Google review: [link] 🌟"
+          Touch 2 (Email, Day 3):
+            Subject: "How was your visit with Dr. [LastName]?"
+            Body: Friendly thank-you, mention specific procedure type,
+            1-click review link, estimated time: "less than 60 seconds"
+          Touch 3 (SMS, Day 7, only if no review):
+            "Quick reminder from [Practice]: your feedback helps other
+             families find quality eye care. Leave a review: [link] 🙏"
+          Customize voice per practice. Generate 3 variants for A/B testing.
+        inputs:
+          - campaign_configs
+        outputs:
+          - review_request_content (per practice, 3 variants each)
+
+  # ── Stage 2: Campaign Execution (Days 2-28) ──────────────────
+  - name: execute
+    description: Send review requests according to campaign schedule
+    duration: 26_days
+    depends_on: [prepare]
+    agents:
+      - agent: apollo
+        task: manage_campaign_execution
+        description: |
+          Orchestrate the send schedule across all practices:
+          - Batch patients into daily cohorts (spread across the month)
+          - Trigger Touch 1 sends via SMS on visit day + 2 hours
+          - Trigger Touch 2 sends via email on day 3 post-Touch-1
+          - Trigger Touch 3 sends via SMS on day 7 (only if no review detected)
+          - A/B test: rotate variants evenly, track per-variant conversion
+          - Pause sends for any practice experiencing deliverability issues
+          - Monitor daily: total sent, delivered, reviews received
+          Weekly report to Atlas on campaign progress.
+        inputs:
+          - eligible_patient_lists
+          - campaign_configs
+          - review_request_content
+
+      - agent: sentinel
+        task: monitor_review_responses
+        description: |
+          Real-time monitoring during the campaign:
+          - Track new reviews as they come in per practice
+          - Match reviews to campaign cohorts (attribution)
+          - Alert immediately on any 1-2 star reviews (route to response team)
+          - Flag patterns: practice with zero reviews after 50+ requests (possible
+            broken link or deliverability issue)
+          - Track competitor review velocity in same markets
+          - Daily dashboard update: reviews received today, MTD total, vs. target
+        outputs:
+          - daily_review_tracking
+          - alert_log
+
+      - agent: quill
+        task: draft_review_responses
+        description: |
+          Draft responses for all incoming reviews:
+          - 5-star reviews: warm thank-you, mention specific praise, invite referrals
+            (turnaround: <4 hours)
+          - 4-star reviews: thank-you, acknowledge, gently invite back
+            (turnaround: <4 hours)
+          - 3-star reviews: empathetic, address concerns, invite offline discussion
+            (turnaround: <2 hours)
+          - 1-2 star reviews: professional, empathetic, provide contact info,
+            avoid defensiveness (turnaround: <1 hour, escalate to human first)
+          All responses customized to practice voice. Route through Apollo for approval.
+
+  # ── Stage 3: Month-End Analysis (Day 28-31) ──────────────────
+  - name: analyze
+    description: Compile results, optimize for next month
+    duration: 3_days
+    depends_on: [execute]
+    agents:
+      - agent: oracle
+        task: compile_monthly_review_report
+        description: |
+          For each practice, compile monthly review report:
+          - Total new reviews (Google + other platforms)
+          - Average star rating of new reviews
+          - Review request conversion rate (by channel, by variant)
+          - A/B test results with statistical significance
+          - Comparison to previous month and portfolio benchmarks
+          - Net rating change (beginning vs. end of month)
+          - Top praised themes and top complaint themes
+          - Competitor review velocity comparison
+          
+          Portfolio summary:
+          - Total reviews generated across all practices
+          - Portfolio-wide average conversion rate
+          - Best-performing and worst-performing practices
+          - Recommendations for next month's campaign adjustments
+        outputs:
+          - practice_review_reports (per practice)
+          - portfolio_review_summary
+          - next_month_recommendations
+
+      - agent: muse
+        task: optimize_next_month
+        description: |
+          Based on Oracle's analysis, adjust next month's campaign:
+          - Promote winning A/B test variants to default
+          - Adjust channel mix for underperforming practices
+          - Update templates for practices that hit target (try new creative)
+          - Add pre-screening for practices that received 3+ negative reviews
+          - Recommend practice-specific target adjustments
+        inputs:
+          - portfolio_review_summary
+          - next_month_recommendations
+        outputs:
+          - next_month_campaign_adjustments
+
+completion_criteria:
+  - all practices received review requests
+  - portfolio average >= 12 new reviews per practice
+  - all reviews received responses within SLA
+  - monthly report delivered within 5 days of month-end
+
+notifications:
+  on_start:
+    - channel: slack
+      message: "📋 Monthly review campaign started for {practice_count} practices"
+  weekly_update:
+    - channel: slack
+      message: "📊 Review campaign week {week}: {total_reviews} reviews ({pct_of_target}% of target)"
+  on_negative_review:
+    - channel: slack
+      priority: high
+      message: "⚠️ {star_count}-star review at {practice_name}: '{review_excerpt}...'"
+  on_complete:
+    - channel: slack
+      message: "✅ Monthly review campaign complete: {total_reviews} reviews across {practice_count} practices"
